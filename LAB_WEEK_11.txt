@@ -1,0 +1,41 @@
+EdricHugo_00000077134
+
+1. When a user takes a picture, that picture is stored in a path based on the given URL. In which part of the code handles this? (Copy that part of the code as the answer)
+
+Jawaban:
+Proses penyalinan data dari lokasi penyimpanan sementara (yang ditunjuk oleh URL FileProvider) ke lokasi permanen MediaStore ditangani oleh fungsi 'insertToStore' di ProviderFileManager.kt, menggunakan ContentResolver dan IOUtils.copy:
+
+private fun insertToStore (fileInfo: FileInfo, contentUrl: Url,
+contentValues: ContentValues) {
+    executor.execute {
+        val insertedUrl = contentResolver.insert(contentUrl,
+        contentValues)
+        insertedUrl?.let {
+            val inputStream =
+            contentResolver.openInputStream(fileInfo.url)
+            val outputStream =
+            contentResolver.openOutputStream(insertedUrl)
+            IOUtils.copy(inputStream, outputStream)
+        }
+    }
+}
+
+---
+
+2. In your FileInfo.kt, there are 5 attributes. On the first attribute, what does the URL refer to? And on the fourth attribute, what does relativePath refer to?
+
+Jawaban:
+* Atribut Pertama (url): Merujuk pada URL Sementara (Temporary URL). URL ini dihasilkan oleh FileProvider dan diteruskan ke aplikasi kamera sebagai petunjuk lokasi penyimpanan file hasil tangkapan. URL ini membatasi akses ke file hanya untuk aplikasi ini.
+* Atribut Keempat (relativePath): Merujuk pada Jalur Relatif (Relative Path). Ini adalah nama folder publik di External Storage (misalnya 'Pictures' atau 'Movies') tempat file media akan disimpan secara permanen oleh MediaStore.
+
+---
+
+3. [Bonus] Explain the chronological order from when a user takes a picture until the file is stored in the MediaStore.
+
+Jawaban:
+1.  URL Sementara Dibuat: Saat tombol 'Photo' diklik, ProviderFileManager membuat objek File sementara di direktori eksternal pribadi aplikasi dan menghasilkan Temporary URL menggunakan FileProvider. URL ini disimpan dalam objek FileInfo.
+2.  Kamera Diluncurkan: Temporary URL diteruskan ke ActivityResultLauncher (TakePicture contract), yang kemudian meluncurkan aplikasi kamera.
+3.  Pengambilan Gambar: Aplikasi kamera mengambil gambar dan menyimpannya ke lokasi file sementara yang ditunjuk oleh Temporary URL yang diberikan.
+4.  Entri MediaStore Dibuat: Setelah kamera kembali, callback mengambil alih, memanggil ProviderFileManager.insertImageToStore(). ContentResolver.insert() digunakan untuk mendaftarkan metadata file di MediaStore dan mengembalikan Permanent URL (insertedUrl).
+5.  Penyalinan Data: Fungsi insertToStore kemudian membuka Input Stream ke Temporary URL (tempat file berada) dan Output Stream ke Permanent URL (lokasi MediaStore). Data gambar disalin menggunakan IOUtils.copy(inputStream, outputStream).
+6.  Penyimpanan Final: File sekarang berada di lokasi penyimpanan publik MediaStore dan dapat diakses oleh aplikasi galeri atau aplikasi lain.
